@@ -1,48 +1,101 @@
-import React, { useState, Fragment, useContext, useEffect } from "react";
-import "./App.css";
-import { VideoContext, IAction } from "./contexts/VideoContext";
+import React, { useState } from "react";
+import QuestionCard from "./components/QuestionCard";
+import { fetchQuizQuestions, Difficulty, QuestionState } from "./API";
+import { GlobalStyle, Wrapper } from "./App.styles";
+
+export type AnswerObject = {
+  question: string;
+  answer: string;
+  correct: boolean;
+  correctAnswer: string;
+};
 
 function App(): JSX.Element {
-  const { state, dispatch } = useContext(VideoContext);
+  const TOTAL_QUESTIONS = 10;
 
-  useEffect(() => {
-    state.episodes.length === 0 && fetchData();
-  });
+  // const [questionNr, setquestionNr] = useState(0);
+  const [questions, setQuestions] = useState<QuestionState[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [number, setNumber] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<AnswerObject[]>([]);
+  const [score, setScore] = useState(0);
+  const [gameOver, setGameOver] = useState(true);
 
-  interface Post {
-    userId: number;
-    id: number;
-    title: string;
-    body: string;
-  }
+  const startTrivia = async () => {
+    setLoading(true);
+    setGameOver(false);
 
-  const fetchData = async () => {
-    const url = "https://jsonplaceholder.typicode.com/posts";
-    const data = await fetch(url);
-    const dataJson = await data.json();
-    return dispatch({
-      type: "FETCH_DATA",
-      payload: dataJson,
-    });
+    const newQuestions = await fetchQuizQuestions(
+      TOTAL_QUESTIONS,
+      Difficulty.EASY
+    );
+
+    setQuestions(newQuestions);
+    setScore(0);
+    setUserAnswers([]);
+    setNumber(0);
+    setLoading(false);
   };
 
-  const addFavorite = (post: Post): IAction =>
-    dispatch({
-      type: "ADD_FAVORITE",
-      payload: post,
-    });
+  const checkAnswer = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!gameOver) {
+      const answer = e.currentTarget.value;
+      //check answer against correct answer
+      const correct = questions[number].correct_answer === answer;
+      if (correct) setScore((prev) => prev + 1);
+      //save answer in the array for user answers
+      const answerObject = {
+        question: questions[number].question,
+        answer,
+        correct,
+        correctAnswer: questions[number].correct_answer,
+      };
+      setUserAnswers((prev) => [...prev, answerObject]);
+    }
+  };
+
+  const nextQuestion = () => {
+    const nextQuestion = number + 1;
+
+    if (nextQuestion === TOTAL_QUESTIONS) {
+      setGameOver(true);
+    } else {
+      setNumber(nextQuestion);
+    }
+  };
 
   return (
-    <section>
-      {state.episodes.map((item: Post) => (
-        <section key={item.id}>
-          <div>{item.title}</div>
-          <p>{item.body}</p>
-          <button onClick={() => addFavorite(item)}>Add Favorite</button>
-        </section>
-      ))}
-      {console.log(state.favourites)}
-    </section>
+    <>
+      <GlobalStyle />
+      <Wrapper>
+        <h1>React Quiz</h1>
+        {gameOver || userAnswers.length === TOTAL_QUESTIONS ? (
+          <button className="start" onClick={startTrivia}>
+            Start
+          </button>
+        ) : null}
+        {!gameOver ? <p className="score">Score: {score}</p> : null}
+        <p>Loading Question</p>
+        {!loading && !gameOver && (
+          <QuestionCard
+            questionNr={number + 1}
+            totalQuestions={TOTAL_QUESTIONS}
+            question={questions[number].question}
+            answers={questions[number].answers}
+            userAnswer={userAnswers ? userAnswers[number] : undefined}
+            callback={checkAnswer}
+          />
+        )}
+        {!gameOver &&
+        !loading &&
+        userAnswers.length === number + 1 &&
+        number !== TOTAL_QUESTIONS - 1 ? (
+          <button className="next" onClick={nextQuestion}>
+            Next Question
+          </button>
+        ) : null}
+      </Wrapper>
+    </>
   );
 }
 
