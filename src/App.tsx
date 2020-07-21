@@ -8,6 +8,7 @@ import React, {
 import "./App.css";
 import { useForm } from "./useForm";
 import useFetch from "./useFetch";
+import useMeasure from "./useMeasure";
 
 interface Num {
   num1: number;
@@ -20,6 +21,7 @@ function App(): JSX.Element {
   const { data, loading } = useFetch(`http://numbersapi.com/${num}/trivia`);
   const inputText = useRef<HTMLInputElement>(null!);
   const inputNum = useRef<number>(0);
+  const [rect, myRef] = useMeasure(data);
 
   // useEffect(() => {
   //   const onMouseMove = (e: MouseEvent) => {
@@ -33,7 +35,10 @@ function App(): JSX.Element {
 
   return (
     <div>
-      <div>{!data ? "Loading..." : data}</div>
+      <div>{num}</div>
+      <div ref={myRef}>{!data ? "Loading..." : data}</div>
+      {console.log(rect)}
+      <pre>{JSON.stringify(rect, null, 2)}</pre>
       <button onClick={() => setNum(num + 1)}>Add 1</button>
       <form action="">
         <input ref={inputText} type="text" name="name" onChange={setValue} />
